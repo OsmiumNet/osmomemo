@@ -62,4 +62,4 @@ class TestOmemo(unittest.TestCase):
         )
 
         self.assertEqual(SK_A, SK_B)
-        self.assertEqual(message, de_message.decode("utf-8"))
+        self.assertEqual(message, de_message)

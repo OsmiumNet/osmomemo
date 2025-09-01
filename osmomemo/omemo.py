@@ -72,7 +72,7 @@ class Omemo:
                 ephemeral_key: X25519PublicKey,
                 spk_id: str,
                 opk_id: str,
-            ) -> Tuple[bytes, bytes]:
+            ) -> Tuple[bytes, str]:
         
         # Key pairs
         indentity_pair = self._bundle.get_indentity()
@@ -100,7 +100,7 @@ class Omemo:
         ct = encrypted_message[12:]
         message = aesgcm.decrypt(nonce, ct, None)
 
-        return SK, message 
+        return SK, message.decode("utf-8")
 
 
     def _hkdf_derive(self, parts, info=b"OMEMO X3DH", length=32, salt=None):
