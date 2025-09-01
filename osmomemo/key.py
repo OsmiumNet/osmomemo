@@ -72,6 +72,8 @@ class XKeyPair:
             return b64.decode(encoding)
         return b64
 
+
+
 class EdKeyPair:
     def __init__(self, private_key: Ed25519PrivateKey):
         self._private_key = private_key
