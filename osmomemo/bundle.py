@@ -10,7 +10,7 @@ class OmemoBundle:
                 self, 
                 indentity_key: EdKeyPair,
                 signed_prekey: XKeyPair,
-                onetime_prekeys: Dist[str, XKeyPair],
+                onetime_prekeys: Dict[str, XKeyPair],
             ):
         self._indentity_key = indentity_key
         self._signed_prekey = signed_prekey
