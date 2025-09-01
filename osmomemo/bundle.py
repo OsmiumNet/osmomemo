@@ -29,7 +29,7 @@ class OmemoBundle:
             raise Exception("There is no PreKey with this ID.")
 
     def get_prekey_signature(self, encoding="utf-8") -> bytes | str:
-        return self._indentity_key.sing_public_key(
+        return self._indentity_key.sign_public_key(
                 public_key=self._signed_prekey.get_public_key(),
-                encoding="utf-8"
+                encoding=encoding
         )

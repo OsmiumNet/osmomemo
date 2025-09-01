@@ -35,7 +35,7 @@ class TestOmemo(unittest.TestCase):
         message = "Initial OMEMO message (1234567890)."
         ik_b = bundle_b.get_indentity().get_public_key() 
         spk_b = bundle_b.get_prekey().get_public_key() 
-        sign_b = bundle_b.get_indentity().sign_public_key(spk_b, encoding=None) 
+        sign_b = bundle_b.get_prekey_signature(encoding=None) 
         opk_id = "0"
         opk_b = bundle_b.get_onetime_prekey(opk_id).get_public_key()
         
