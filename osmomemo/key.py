@@ -176,3 +176,12 @@ class EdKeyPair:
             return base64.b64encode(sign_bytes).decode(encoding)
         return sign_bytes 
 
+
+    @staticmethod
+    def verify_public_key(
+                verifier: Ed25519PublicKey, 
+                public_key: X25519PublicKey | Ed25519PublicKey, 
+                signature: bytes,
+            ):
+        verifier.verify(signature, public_key.public_bytes(Encoding.Raw, PublicFormat.Raw))
+
