@@ -127,7 +127,7 @@ class EdKeyPair:
     def get_public_key(self) -> Ed25519PublicKey:
         return self._public_key
 
-    def get_x_private_key(self) -> X5519PrivateKey:
+    def get_x_private_key(self) -> X25519PrivateKey:
         return EdKeyPair.private_ed_to_x_key(self._private_key)
 
     def get_x_public_key(self) -> X25519PublicKey:
