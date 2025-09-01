@@ -18,6 +18,10 @@ class XKeyPair:
         self._public_key = self._private_key.public_key()
 
     @classmethod
+    def generate(cls) -> Self:
+        return cls(X25519PrivateKey.generate())
+
+    @classmethod
     def import_from_base64(cls, private_b64: str) -> Self:
         return cls(cls.base64_to_private_key(private_b64))
 
@@ -72,6 +76,10 @@ class EdKeyPair:
     def __init__(self, private_key: Ed25519PrivateKey):
         self._private_key = private_key
         self._public_key = self._private_key.public_key()
+
+    @classmethod
+    def generate(cls) -> Self:
+        return cls(Ed25519PrivateKey.generate())
 
     @classmethod
     def import_from_base64(cls, private_b64: str) -> Self:
