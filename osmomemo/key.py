@@ -169,7 +169,7 @@ class EdKeyPair:
                 self, 
                 public_key: X25519PublicKey | Ed25519PublicKey, 
                 encoding="utf-8"
-            ):
+            ) -> bytes | str:
         sign_bytes = self._private_key.sign(public_key.public_bytes(Encoding.Raw, PublicFormat.Raw))
 
         if (encoding):
