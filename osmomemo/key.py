@@ -164,3 +164,15 @@ class EdKeyPair:
         if (encoding):
             return b64.decode(encoding)
         return b64
+
+    def sign_public_key(
+                self, 
+                public_key: X25519PublicKey | Ed25519PublicKey, 
+                encoding="utf-8"
+            ):
+        sign_bytes = self._private_key.sign(public_key.public_bytes(Encoding.Raw, PublicFormat.Raw))
+
+        if (encoding):
+            return base64.b64encode(sign_bytes).decode(encoding)
+        return sign_bytes 
+
