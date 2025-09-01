@@ -64,7 +64,7 @@ class XKeyPair:
             ) -> bytes | str:
         public_bytes = self._public_key.public_bytes(
             encoding=Encoding.Raw,
-            format=PrivateFormat.Raw,
+            format=PublicFormat.Raw,
         )
         b64 = base64.b64encode(public_bytes)
 
@@ -96,26 +96,26 @@ class EdKeyPair:
         return Ed25519PublicKey.from_public_bytes(raw_bytes)
 
     @staticmethod
-    def private_ed_to_x_key(self, private_key: Ed25519PrivateKey) -> X25519PrivateKey:
+    def private_ed_to_x_key(private_key: Ed25519PrivateKey) -> X25519PrivateKey:
         private_bytes = private_key.private_bytes(
             encoding=Encoding.Raw,
             format=PrivateFormat.Raw,
             encryption_algorithm=NoEncryption()
         )
-        pyblic_bytes = private_key.public_key().public_bytes(
+        public_bytes = private_key.public_key().public_bytes(
             encoding=Encoding.Raw,
-            format=PrivateFormat.Raw,
+            format=PublicFormat.Raw,
         )
         ed_bytes = private_bytes + public_bytes
-        x_bytes = crypto_sign_ed25519_sk_to_curve25519(keys_bytes)
+        x_bytes = crypto_sign_ed25519_sk_to_curve25519(ed_bytes)
         return X25519PrivateKey.from_private_bytes(x_bytes)
 
 
     @staticmethod
-    def public_ed_to_x_key(self, public_key: Ed25519PublicKey) -> X25519PublicKey:
+    def public_ed_to_x_key(public_key: Ed25519PublicKey) -> X25519PublicKey:
         pyblic_bytes = public_key.public_bytes(
             encoding=Encoding.Raw,
-            format=PrivateFormat.Raw,
+            format=PublicFormat.Raw,
         )
         x_bytes = crypto_sign_ed25519_pk_to_curve25519(pyblic_bytes)
         return X25519PublicKey.from_public_bytes(x_bytes)
@@ -155,7 +155,7 @@ class EdKeyPair:
             ) -> bytes | str:
         public_bytes = self._public_key.public_bytes(
             encoding=Encoding.Raw,
-            format=PrivateFormat.Raw,
+            format=PublicFormat.Raw,
         )
         b64 = base64.b64encode(public_bytes)
 
