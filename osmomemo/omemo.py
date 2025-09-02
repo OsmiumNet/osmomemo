@@ -48,7 +48,7 @@ class Omemo:
         DH4 = ek.exchange(onetime_prekey)
 
         # Calculate Secret Key
-        SK = self._hkdf_derive([DH1, DH2, DH3, DH4]) 
+        SK = self._hkdf_derive(DH1 + DH2 + DH3 + DH4) 
 
         # Delete ephemeral
         ek_pub = ephemeral_pair.get_public_key()
@@ -56,7 +56,7 @@ class Omemo:
         del ek
 
         # Derive an AEAD key and encrypt the initial payload
-        aead_key = self._hkdf_derive([SK])
+        aead_key = self._hkdf_derive(SK)
         aesgcm = AESGCM(aead_key)
         nonce = os.urandom(12)
         initial_plain = message.encode("utf-8")
@@ -91,10 +91,10 @@ class Omemo:
         DH4 = opk.exchange(ephemeral_key)
 
         # Calculate Secret Key
-        SK = self._hkdf_derive([DH1, DH2, DH3, DH4]) 
+        SK = self._hkdf_derive(DH1 + DH2 + DH3 + DH4) 
 
         # Derive an AEAD key and encrypt the initial payload
-        aead_key = self._hkdf_derive([SK])
+        aead_key = self._hkdf_derive(SK)
         aesgcm = AESGCM(aead_key)
         nonce = encrypted_message[:12]; 
         ct = encrypted_message[12:]
@@ -103,7 +103,7 @@ class Omemo:
         return SK, message.decode("utf-8")
 
 
-    def _hkdf_derive(self, parts, info=b"OMEMO X3DH", length=32, salt=None):
+    def _hkdf_derive(self, kbs, info=b"OMEMO X3DH", length=32, salt=None):
         hk = HKDF(algorithm=hashes.SHA256(), info=info, length=length, salt=salt)
-        return hk.derive(b"".join(parts))
+        return hk.derive(kbs)
 
