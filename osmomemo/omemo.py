@@ -106,9 +106,7 @@ class Omemo:
         return two_cks[32:], two_cks[:32]
 
     def send_message(self, chain_key, count, message_bytes) -> Tuple[bytes, bytes, bytes]:
-        msg_key, wrap_key, next_ck = self._derive_message_and_wrap(
-                    chain_key, count
-        )
+        msg_key, wrap_key, next_ck = self._derive_message_and_wrap(chain_key, count)
         wrapped = self._wrap_message_key(wrap_key, msg_key)
         payload = self._encrypt_payload_with_msgkey(msg_key, message_bytes)
         return next_ck, wrapped, payload
