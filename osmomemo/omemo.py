@@ -101,8 +101,58 @@ class Omemo:
 
         return SK, message_bytes
 
+    def split_secret_key(self, secret_key) -> Tuple[bytes, bytes]:
+        two_cks = self._hkdf_derive(secret_key, length=64)
+        return two_cks[32:], two_cks[:32]
 
-    def _hkdf_derive(self, kbs, info=b"OMEMO X3DH", length=32, salt=None):
+    def send_message(self, chain_key, count, message_bytes) -> Tuple[bytes, bytes, bytes]:
+        msg_key, wrap_key, next_ck = self._derive_message_and_wrap(
+                    chain_key, count
+        )
+        wrapped = self._wrap_message_key(wrap_key, msg_key)
+        payload = self._encrypt_payload_with_msgkey(msg_key, message_bytes)
+        return next_ck, wrapped, payload
+
+    def receive_message(self, chain_key, count, wrapped_message_key, payload) -> Tuple[bytes, bytes, bytes]:
+        _, wrap_key, next_ck = self._derive_message_and_wrap(chain_key, count)
+        message_key = self._unwrap_message_key(wrap_key, wrapped_message_key)
+        message = self._decrypt_payload_with_msgkey(message_key, payload)
+        return next_ck, message
+
+
+
+    def _hkdf_derive(self, kbs, info=b"OMEMO X3DH", length=32, salt=None) -> bytes:
         hk = HKDF(algorithm=hashes.SHA256(), info=info, length=length, salt=salt)
         return hk.derive(kbs)
+
+    def _derive_message_and_wrap(self, ck, counter) -> Tuple[bytes, bytes, bytes]:
+        ctr_bytes = counter.to_bytes(8, 'big')
+        msg_key = self._hkdf_derive(ck, info=b"msg|" + ctr_bytes, length=32)
+        wrap_key = self._hkdf_derive(ck, info=b"wrap", length=32)
+        new_ck = self._hkdf_derive(ck, info=b"ck", length=32)
+        return msg_key, wrap_key, new_ck
+
+    def _wrap_message_key(self, wrap_key, message_key) -> bytes:
+        aes = AESGCM(wrap_key)
+        nonce = os.urandom(12)
+        ct = aes.encrypt(nonce, message_key, None)
+        return nonce + ct
+
+    def _unwrap_message_key(self, wrap_key, message_key) -> bytes:
+        nonce, ct = message_key[:12], message_key[12:]
+        aes = AESGCM(wrap_key)
+        return aes.decrypt(nonce, ct, None)
+
+    def _encrypt_payload_with_msgkey(self, message_key, message_bytes) -> bytes:
+        aes = AESGCM(message_key)
+        nonce = os.urandom(12)
+        ct = aes.encrypt(nonce, message_bytes, None)
+        return nonce + ct
+
+    def _decrypt_payload_with_msgkey(self, message_key, payload) -> bytes:
+        nonce, ct = payload[:12], payload[12:]
+        aes = AESGCM(message_key)
+        return aes.decrypt(nonce, ct, None)
+
+
 
