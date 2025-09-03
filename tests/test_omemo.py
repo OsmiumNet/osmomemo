@@ -9,6 +9,8 @@ from osmomemo import EdKeyPair
 
 class TestOmemo(unittest.TestCase):
     def test_init(self):
+        store_path = "./tests/omemo.db"
+
         bundle_a = OmemoBundle(
             EdKeyPair.generate(),
             XKeyPair.generate(),
@@ -29,8 +31,8 @@ class TestOmemo(unittest.TestCase):
             }
         )
 
-        omemo_a = Omemo(bundle_a)
-        omemo_b = Omemo(bundle_b)
+        omemo_a = Omemo(bundle_a, store_path)
+        omemo_b = Omemo(bundle_b, store_path)
 
         message = "Initial OMEMO message (1234567890)."
         ik_b = bundle_b.get_indentity().get_public_key() 
@@ -40,7 +42,9 @@ class TestOmemo(unittest.TestCase):
         opk_b = bundle_b.get_onetime_prekey(opk_id).get_public_key()
         
 
-        SK_A, EK_A, en_message = omemo_a.create_init_message(
+        EK_A, en_message = omemo_a.create_init_message(
+            jid="bob@domain.com",
+            device=45454545,
             message_bytes=message.encode(),
             indentity_key=ik_b,
             signed_prekey=spk_b,
@@ -53,7 +57,9 @@ class TestOmemo(unittest.TestCase):
         spk_id = "0"
         msg = en_message
 
-        SK_B, de_message = omemo_b.accept_init_message(
+        de_message = omemo_b.accept_init_message(
+            jid="alice@domain.com",
+            device=676767676,
             encrypted_message=msg,
             indentity_key=ik_a,
             ephemeral_key=ek_a,
@@ -61,10 +67,10 @@ class TestOmemo(unittest.TestCase):
             opk_id=opk_id
         )
 
-        self.assertEqual(SK_A, SK_B)
         self.assertEqual(message, de_message.decode())
 
     def test_send(self):
+        store_path = "./tests/omemo.db"
         bundle_a = OmemoBundle(
             EdKeyPair.generate(),
             XKeyPair.generate(),
@@ -85,10 +91,11 @@ class TestOmemo(unittest.TestCase):
             }
         )
 
-        omemo_a = Omemo(bundle_a)
-        omemo_b = Omemo(bundle_b)
+        omemo_a = Omemo(bundle_a, store_path)
+        omemo_b = Omemo(bundle_b, store_path)
 
         message = "Initial OMEMO message (1234567890)."
+        device_b=45454545
         ik_b = bundle_b.get_indentity().get_public_key() 
         spk_b = bundle_b.get_prekey().get_public_key() 
         sign_b = bundle_b.get_prekey_signature(encoding=None) 
@@ -96,7 +103,9 @@ class TestOmemo(unittest.TestCase):
         opk_b = bundle_b.get_onetime_prekey(opk_id).get_public_key()
         
 
-        SK_A, EK_A, en_message = omemo_a.create_init_message(
+        EK_A, en_message = omemo_a.create_init_message(
+            jid="bob@domain.com",
+            device=device_b,
             message_bytes=message.encode(),
             indentity_key=ik_b,
             signed_prekey=spk_b,
@@ -104,12 +113,15 @@ class TestOmemo(unittest.TestCase):
             onetime_prekey=opk_b,
         )
 
+        device_a=676767676
         ik_a = bundle_a.get_indentity().get_public_key() 
         ek_a = EK_A
         spk_id = "0"
         msg = en_message
 
-        SK_B, de_message = omemo_b.accept_init_message(
+        de_message = omemo_b.accept_init_message(
+            jid="alice@domain.com",
+            device=device_a,
             encrypted_message=msg,
             indentity_key=ik_a,
             ephemeral_key=ek_a,
@@ -117,44 +129,27 @@ class TestOmemo(unittest.TestCase):
             opk_id=opk_id
         )
 
-        self.assertEqual(SK_A, SK_B)
         self.assertEqual(message, de_message.decode())
 
 
         ### Sending
         ## Alice
         message_a = "Hello Bob! How are you?"
-        count_a_s = 0
-        count_a_r = 0
 
-        # Recv, Send
-        SK_A_R, SK_A_S = omemo_a.split_secret_key(SK_A)
-
-        SK_A_S, wrapped_a, payload_a = omemo_a.send_message(SK_A_S, count_a_s, message_a.encode())
-        count_a_s += 1
+        wrapped_a, payload_a = omemo_a.send_message(device_b, message_a.encode())
 
         ## Bob
-        count_b_s = 0
-        count_b_r = 0
-
-        # Send, Recv (The order is crucial) "SK_A_S" must be equal "SK_B_R"
-        SK_B_S, SK_B_R = omemo_b.split_secret_key(SK_B)
-
-        SK_B_R, message_b = omemo_b.receive_message(SK_B_R, count_b_r, wrapped_a, payload_a)
-        count_b_r += 1
+        message_b = omemo_b.receive_message(device_a, wrapped_a, payload_a)
 
         # TEST
         self.assertEqual(message_a, message_b.decode())
 
 
-
         message_b = "Hi, Alice! I am good =)"
 
-        SK_B_S, wrapped_b, payload_b = omemo_b.send_message(SK_B_S, count_b_s, message_b.encode())
-        count_a_s += 1
+        wrapped_b, payload_b = omemo_b.send_message(device_a, message_b.encode())
 
-        SK_A_R, message_a = omemo_a.receive_message(SK_A_R, count_a_r, wrapped_b, payload_b)
-        count_b_r += 1
+        message_a = omemo_a.receive_message(device_b, wrapped_b, payload_b)
 
         # Test
         self.assertEqual(message_b, message_a.decode())
