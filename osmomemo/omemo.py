@@ -18,7 +18,7 @@ class Omemo:
 
     def create_init_message(
                 self,
-                message: str,
+                message_bytes: bytes,
                 indentity_key: Ed25519PublicKey,
                 signed_prekey: X25519PublicKey,
                 prekey_signature: bytes,
@@ -59,8 +59,7 @@ class Omemo:
         aead_key = self._hkdf_derive(SK)
         aesgcm = AESGCM(aead_key)
         nonce = os.urandom(12)
-        initial_plain = message.encode("utf-8")
-        ct = aesgcm.encrypt(nonce, initial_plain, None)
+        ct = aesgcm.encrypt(nonce, message_bytes, None)
         encrypted_message = nonce + ct
 
         return SK, ek_pub, encrypted_message 
@@ -72,7 +71,7 @@ class Omemo:
                 ephemeral_key: X25519PublicKey,
                 spk_id: str,
                 opk_id: str,
-            ) -> Tuple[bytes, str]:
+            ) -> Tuple[bytes, bytes]:
         
         # Key pairs
         indentity_pair = self._bundle.get_indentity()
@@ -98,9 +97,9 @@ class Omemo:
         aesgcm = AESGCM(aead_key)
         nonce = encrypted_message[:12]; 
         ct = encrypted_message[12:]
-        message = aesgcm.decrypt(nonce, ct, None)
+        message_bytes = aesgcm.decrypt(nonce, ct, None)
 
-        return SK, message.decode("utf-8")
+        return SK, message_bytes
 
 
     def _hkdf_derive(self, kbs, info=b"OMEMO X3DH", length=32, salt=None):
