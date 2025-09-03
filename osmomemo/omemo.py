@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey,
 
 from .key import XKeyPair, EdKeyPair 
 from .bundle import OmemoBundle
+from .crypto import OmemoCryptography as OmemoCrypto
 
 class Omemo:
     def __init__(self, bundle: OmemoBundle):
@@ -24,43 +25,17 @@ class Omemo:
                 prekey_signature: bytes,
                 onetime_prekey: X25519PublicKey,
             ) -> Tuple[bytes, bytes, bytes]:
-        
-        # Verify signed PreKey signature
-        EdKeyPair.verify_public_key(
-                verifier=indentity_key,
-                public_key=signed_prekey,
-                signature=prekey_signature
-        )
-
         # Key pairs
         indentity_pair = self._bundle.get_indentity()
-        # We are the initiator, so we must generate a ephemeral key
-        ephemeral_pair = XKeyPair.generate()
 
-        # Private keys
-        ik = indentity_pair.get_x_private_key()
-        ek = ephemeral_pair.get_private_key()  
-
-        # Make Elliptic Curve Diffie-Hellman parts
-        DH1 = ik.exchange(signed_prekey)
-        DH2 = ek.exchange(EdKeyPair.public_ed_to_x_key(indentity_key))
-        DH3 = ek.exchange(signed_prekey)
-        DH4 = ek.exchange(onetime_prekey)
-
-        # Calculate Secret Key
-        SK = self._hkdf_derive(DH1 + DH2 + DH3 + DH4) 
-
-        # Delete ephemeral
-        ek_pub = ephemeral_pair.get_public_key()
-        del ephemeral_pair  
-        del ek
-
-        # Derive an AEAD key and encrypt the initial payload
-        aead_key = self._hkdf_derive(SK)
-        aesgcm = AESGCM(aead_key)
-        nonce = os.urandom(12)
-        ct = aesgcm.encrypt(nonce, message_bytes, None)
-        encrypted_message = nonce + ct
+        SK, ek_pub, encrypted_message = OmemoCrypto.create_init_message(
+                message_bytes=message_bytes,
+                indentity_pair=indentity_pair,
+                indentity_key=indentity_key,
+                signed_prekey=signed_prekey,
+                prekey_signature=prekey_signature,
+                onetime_prekey=onetime_prekey,
+        )
 
         return SK, ek_pub, encrypted_message 
 
@@ -72,85 +47,31 @@ class Omemo:
                 spk_id: str,
                 opk_id: str,
             ) -> Tuple[bytes, bytes]:
-        
+
         # Key pairs
         indentity_pair = self._bundle.get_indentity()
         prekey_pair = self._bundle.get_prekey()
         onetime_prekey_pair = self._bundle.get_onetime_prekey(opk_id)
-
-        # Private keys
-        ik = indentity_pair.get_x_private_key()
-        spk = prekey_pair.get_private_key()
-        opk = onetime_prekey_pair.get_private_key()
-
-        # Make Elliptic Curve Diffie-Hellman parts
-        DH1 = spk.exchange(EdKeyPair.public_ed_to_x_key(indentity_key))
-        DH2 = ik.exchange(ephemeral_key)
-        DH3 = spk.exchange(ephemeral_key)
-        DH4 = opk.exchange(ephemeral_key)
-
-        # Calculate Secret Key
-        SK = self._hkdf_derive(DH1 + DH2 + DH3 + DH4) 
-
-        # Derive an AEAD key and encrypt the initial payload
-        aead_key = self._hkdf_derive(SK)
-        aesgcm = AESGCM(aead_key)
-        nonce = encrypted_message[:12]; 
-        ct = encrypted_message[12:]
-        message_bytes = aesgcm.decrypt(nonce, ct, None)
+        
+        SK, message_bytes = OmemoCrypto.accept_init_message(
+                encrypted_message=encrypted_message,
+                indentity_pair=indentity_pair,
+                prekey_pair=prekey_pair,
+                onetime_prekey_pair=onetime_prekey_pair,
+                indentity_key=indentity_key,
+                ephemeral_key=ephemeral_key,
+        )
 
         return SK, message_bytes
 
     def split_secret_key(self, secret_key) -> Tuple[bytes, bytes]:
-        two_cks = self._hkdf_derive(secret_key, length=64)
-        return two_cks[32:], two_cks[:32]
+        ck1, ck2 = OmemoCrypto.split_secret_key(secret_key)  
+        return ck1, ck2
 
     def send_message(self, chain_key, count, message_bytes) -> Tuple[bytes, bytes, bytes]:
-        msg_key, wrap_key, next_ck = self._derive_message_and_wrap(chain_key, count)
-        wrapped = self._wrap_message_key(wrap_key, msg_key)
-        payload = self._encrypt_payload_with_msgkey(msg_key, message_bytes)
+        next_ck, wrapped, payload = OmemoCrypto.send_message(chain_key, count, message_bytes)
         return next_ck, wrapped, payload
 
     def receive_message(self, chain_key, count, wrapped_message_key, payload) -> Tuple[bytes, bytes, bytes]:
-        _, wrap_key, next_ck = self._derive_message_and_wrap(chain_key, count)
-        message_key = self._unwrap_message_key(wrap_key, wrapped_message_key)
-        message = self._decrypt_payload_with_msgkey(message_key, payload)
+        next_ck, message = OmemoCrypto.receive_message(chain_key, count, wrapped_message_key, payload)
         return next_ck, message
-
-
-
-    def _hkdf_derive(self, kbs, info=b"OMEMO X3DH", length=32, salt=None) -> bytes:
-        hk = HKDF(algorithm=hashes.SHA256(), info=info, length=length, salt=salt)
-        return hk.derive(kbs)
-
-    def _derive_message_and_wrap(self, ck, counter) -> Tuple[bytes, bytes, bytes]:
-        ctr_bytes = counter.to_bytes(8, 'big')
-        msg_key = self._hkdf_derive(ck, info=b"msg|" + ctr_bytes, length=32)
-        wrap_key = self._hkdf_derive(ck, info=b"wrap", length=32)
-        new_ck = self._hkdf_derive(ck, info=b"ck", length=32)
-        return msg_key, wrap_key, new_ck
-
-    def _wrap_message_key(self, wrap_key, message_key) -> bytes:
-        aes = AESGCM(wrap_key)
-        nonce = os.urandom(12)
-        ct = aes.encrypt(nonce, message_key, None)
-        return nonce + ct
-
-    def _unwrap_message_key(self, wrap_key, message_key) -> bytes:
-        nonce, ct = message_key[:12], message_key[12:]
-        aes = AESGCM(wrap_key)
-        return aes.decrypt(nonce, ct, None)
-
-    def _encrypt_payload_with_msgkey(self, message_key, message_bytes) -> bytes:
-        aes = AESGCM(message_key)
-        nonce = os.urandom(12)
-        ct = aes.encrypt(nonce, message_bytes, None)
-        return nonce + ct
-
-    def _decrypt_payload_with_msgkey(self, message_key, payload) -> bytes:
-        nonce, ct = payload[:12], payload[12:]
-        aes = AESGCM(message_key)
-        return aes.decrypt(nonce, ct, None)
-
-
-
