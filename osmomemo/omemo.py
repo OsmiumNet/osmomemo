@@ -1,24 +1,32 @@
 import os
 import json
+import base64
 
 from typing import Tuple
 
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey  
 
-from .key import XKeyPair, EdKeyPair 
 from .bundle import OmemoBundle
+from .storage import OmemoStorage
+from .key import XKeyPair, EdKeyPair 
 from .crypto import OmemoCryptography as OmemoCrypto
 
+def b64(b: bytes) -> str:
+    return base64.b64encode(b).decode('utf-8')
+
+def ub64(s: str) -> bytes:
+    return base64.b64decode(s.encode("utf-8"))
+
 class Omemo:
-    def __init__(self, bundle: OmemoBundle):
+    def __init__(self, bundle: OmemoBundle, store_path):
         self._bundle = bundle
+        self._storage = OmemoStorage(store_path)
 
     def create_init_message(
                 self,
+                jid: str,
+                device: int,
                 message_bytes: bytes,
                 indentity_key: Ed25519PublicKey,
                 signed_prekey: X25519PublicKey,
@@ -37,10 +45,17 @@ class Omemo:
                 onetime_prekey=onetime_prekey,
         )
 
-        return SK, ek_pub, encrypted_message 
+        SK_RECV, SK_SEND = OmemoCrypto.split_secret_key(SK)
+
+        self._storage.add_device(jid, device)
+        self._storage.add_session(device, b64(SK_RECV), b64(SK_SEND))
+
+        return ek_pub, encrypted_message 
 
     def accept_init_message(
                 self,
+                jid: str,
+                device: int,
                 encrypted_message: bytes,
                 indentity_key: Ed25519PublicKey,
                 ephemeral_key: X25519PublicKey,
@@ -62,16 +77,35 @@ class Omemo:
                 ephemeral_key=ephemeral_key,
         )
 
-        return SK, message_bytes
+        SK_SEND, SK_RECV = OmemoCrypto.split_secret_key(SK)
 
-    def split_secret_key(self, secret_key) -> Tuple[bytes, bytes]:
-        ck1, ck2 = OmemoCrypto.split_secret_key(secret_key)  
-        return ck1, ck2
+        self._storage.add_device(jid, device)
+        self._storage.add_session(device, b64(SK_RECV), b64(SK_SEND))
 
-    def send_message(self, chain_key, count, message_bytes) -> Tuple[bytes, bytes, bytes]:
-        next_ck, wrapped, payload = OmemoCrypto.send_message(chain_key, count, message_bytes)
-        return next_ck, wrapped, payload
+        return message_bytes
 
-    def receive_message(self, chain_key, count, wrapped_message_key, payload) -> Tuple[bytes, bytes, bytes]:
-        next_ck, message = OmemoCrypto.receive_message(chain_key, count, wrapped_message_key, payload)
-        return next_ck, message
+    def send_message(self, device: int, message_bytes: bytes) -> Tuple[bytes, bytes, bytes]:
+        session = self._storage.get_session(device)
+        next_ck, wrapped, payload = OmemoCrypto.send_message(
+                ub64(session.send_secret_key), 
+                session.send_count, 
+                message_bytes
+        )
+        self._storage.update_send_secret(device, b64(next_ck))
+        self._storage.increase_send_count(device)
+        return wrapped, payload
+
+    def receive_message(self, device: int, wrapped_message_key: bytes, payload: bytes) -> Tuple[bytes, bytes, bytes]:
+        session = self._storage.get_session(device)
+        next_ck, message = OmemoCrypto.receive_message(
+                ub64(session.receive_secret_key), 
+                session.receive_count, 
+                wrapped_message_key, 
+                payload
+        )
+        self._storage.update_receive_secret(device, b64(next_ck))
+        self._storage.increase_receive_count(device)
+        return message
+
+    def close_storage(self):
+        pass
