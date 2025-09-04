@@ -4,4 +4,4 @@ sync:
 	uv sync
 
 test:
-	uv run python -m unittest tests/*.py
+	uv run python -m unittest tests/test_*.py
