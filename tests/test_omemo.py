@@ -6,10 +6,12 @@ from osmomemo import Omemo
 from osmomemo import OmemoBundle
 from osmomemo import XKeyPair
 from osmomemo import EdKeyPair
+from osmomemo.storage import OmemoStorage
 
 class TestOmemo(unittest.TestCase):
     def test_init(self):
-        store_path = "./tests/omemo.db"
+        storage_path = "./tests/omemo.db"
+        storage = OmemoStorage(storage_path)
 
         bundle_a = OmemoBundle(
             EdKeyPair.generate(),
@@ -31,8 +33,8 @@ class TestOmemo(unittest.TestCase):
             }
         )
 
-        omemo_a = Omemo(bundle_a, store_path)
-        omemo_b = Omemo(bundle_b, store_path)
+        omemo_a = Omemo(bundle_a, storage)
+        omemo_b = Omemo(bundle_b, storage)
 
         message = "Initial OMEMO message (1234567890)."
         jid_b="bob@domain.com"
@@ -74,7 +76,9 @@ class TestOmemo(unittest.TestCase):
         self.assertEqual(message, de_message.decode())
 
     def test_send(self):
-        store_path = "./tests/omemo.db"
+        storage_path = "./tests/omemo.db"
+        storage = OmemoStorage(storage_path)
+
         bundle_a = OmemoBundle(
             EdKeyPair.generate(),
             XKeyPair.generate(),
@@ -95,8 +99,8 @@ class TestOmemo(unittest.TestCase):
             }
         )
 
-        omemo_a = Omemo(bundle_a, store_path)
-        omemo_b = Omemo(bundle_b, store_path)
+        omemo_a = Omemo(bundle_a, storage)
+        omemo_b = Omemo(bundle_b, storage)
 
         message = "Initial OMEMO message (1234567890)."
         jid_b="bob@domain.com"
