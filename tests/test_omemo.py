@@ -14,6 +14,7 @@ class TestOmemo(unittest.TestCase):
         storage = OmemoStorage(storage_path)
 
         bundle_a = OmemoBundle(
+            676767676,
             EdKeyPair.generate(),
             XKeyPair.generate(),
             {
@@ -24,6 +25,7 @@ class TestOmemo(unittest.TestCase):
         )
 
         bundle_b = OmemoBundle(
+            45454545,
             EdKeyPair.generate(),
             XKeyPair.generate(),
             {
@@ -80,6 +82,7 @@ class TestOmemo(unittest.TestCase):
         storage = OmemoStorage(storage_path)
 
         bundle_a = OmemoBundle(
+            676767676,
             EdKeyPair.generate(),
             XKeyPair.generate(),
             {
@@ -90,6 +93,7 @@ class TestOmemo(unittest.TestCase):
         )
 
         bundle_b = OmemoBundle(
+            45454545,
             EdKeyPair.generate(),
             XKeyPair.generate(),
             {
@@ -104,7 +108,7 @@ class TestOmemo(unittest.TestCase):
 
         message = "Initial OMEMO message (1234567890)."
         jid_b="bob@domain.com"
-        device_b=45454545
+        device_b=bundle_b.get_device_id()
         ik_b = bundle_b.get_indentity().get_public_key() 
         spk_b = bundle_b.get_prekey().get_public_key() 
         sign_b = bundle_b.get_prekey_signature(encoding=None) 
@@ -123,7 +127,7 @@ class TestOmemo(unittest.TestCase):
         )
 
         jid_a="alice@domain.com"
-        device_a=676767676
+        device_a=bundle_a.get_device_id()
         ik_a = bundle_a.get_indentity().get_public_key() 
         ek_a = EK_A
         spk_id = "0"
