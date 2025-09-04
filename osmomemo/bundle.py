@@ -21,6 +21,9 @@ class OmemoBundle:
 
     def get_prekey(self) -> XKeyPair:
         return self._signed_prekey
+
+    def get_onetime_prekeys(self) -> Dict[str, XKeyPair]:
+        return self.__onetime_prekeys
     
     def get_onetime_prekey(self, id: str) -> XKeyPair:
         try:
