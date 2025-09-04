@@ -7,14 +7,19 @@ from .key import XKeyPair, EdKeyPair
 
 class OmemoBundle:
     def __init__(
-                self, 
+                self,
+                device_id: int,
                 indentity_key: EdKeyPair,
                 signed_prekey: XKeyPair,
                 onetime_prekeys: Dict[str, XKeyPair],
             ):
+        self._device_id = device_id
         self._indentity_key = indentity_key
         self._signed_prekey = signed_prekey
         self._onetime_prekeys = onetime_prekeys
+
+    def get_device_id(self):
+        return self._device_id
 
     def get_indentity(self) -> EdKeyPair:
         return self._indentity_key
