@@ -2,7 +2,7 @@ import os
 import json
 import base64
 
-from typing import Tuple
+from typing import Tuple, List
 
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey  
@@ -22,6 +22,12 @@ class Omemo:
     def __init__(self, bundle: OmemoBundle, storage: OmemoStorage):
         self._bundle = bundle
         self._storage = storage
+
+    def get_device_list(self, jid) -> List[int] | None:
+        try:
+            return self._storage.get_device_list(jid)
+        except:
+            return None
 
     def create_init_message(
                 self,
