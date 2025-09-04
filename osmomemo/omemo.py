@@ -48,7 +48,7 @@ class Omemo:
         SK_RECV, SK_SEND = OmemoCrypto.split_secret_key(SK)
 
         self._storage.add_device(jid, device)
-        self._storage.add_session(device, b64(SK_RECV), b64(SK_SEND))
+        self._storage.add_session(jid, device, b64(SK_RECV), b64(SK_SEND))
 
         return ek_pub, encrypted_message 
 
@@ -80,31 +80,31 @@ class Omemo:
         SK_SEND, SK_RECV = OmemoCrypto.split_secret_key(SK)
 
         self._storage.add_device(jid, device)
-        self._storage.add_session(device, b64(SK_RECV), b64(SK_SEND))
+        self._storage.add_session(jid, device, b64(SK_RECV), b64(SK_SEND))
 
         return message_bytes
 
-    def send_message(self, device: int, message_bytes: bytes) -> Tuple[bytes, bytes, bytes]:
-        session = self._storage.get_session(device)
+    def send_message(self, jid: str, device: int, message_bytes: bytes) -> Tuple[bytes, bytes, bytes]:
+        session = self._storage.get_session(jid, device)
         next_ck, wrapped, payload = OmemoCrypto.send_message(
                 ub64(session.send_secret_key), 
                 session.send_count, 
                 message_bytes
         )
-        self._storage.update_send_secret(device, b64(next_ck))
-        self._storage.increase_send_count(device)
+        self._storage.update_send_secret(jid, device, b64(next_ck))
+        self._storage.increase_send_count(jid, device)
         return wrapped, payload
 
-    def receive_message(self, device: int, wrapped_message_key: bytes, payload: bytes) -> Tuple[bytes, bytes, bytes]:
-        session = self._storage.get_session(device)
+    def receive_message(self, jid: str, device: int, wrapped_message_key: bytes, payload: bytes) -> Tuple[bytes, bytes, bytes]:
+        session = self._storage.get_session(jid, device)
         next_ck, message = OmemoCrypto.receive_message(
                 ub64(session.receive_secret_key), 
                 session.receive_count, 
                 wrapped_message_key, 
                 payload
         )
-        self._storage.update_receive_secret(device, b64(next_ck))
-        self._storage.increase_receive_count(device)
+        self._storage.update_receive_secret(jid, device, b64(next_ck))
+        self._storage.increase_receive_count(jid, device)
         return message
 
     def close_storage(self):

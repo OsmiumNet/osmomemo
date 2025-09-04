@@ -30,12 +30,14 @@ class OmemoStorage:
             session.commit()
 
     def add_session(
-                self, device: int, 
+                self,
+                jid: str,
+                device: int, 
                 receive_secret_key: str, 
                 send_secret_key: str, 
             ) -> None:
         with Session(self._engine) as session:
-            stmt = select(Device).where(Device.device == device)
+            stmt = select(Device).join(Jid).where(Jid.jid == jid).where(Device.device == device)
             odevice = session.scalar(stmt)
             if (odevice):
                 osession = OmemoSession(
@@ -48,7 +50,7 @@ class OmemoStorage:
                 odevice.session = osession
                 session.commit()
             else:
-                raise Exception("That device does not exist in the database.")
+                raise Exception("Thas JID or device does not exist in the database.")
 
 
     def get_device_list(self, jid: str) -> List[int]:
@@ -64,18 +66,18 @@ class OmemoStorage:
                 raise Exception("That JID does not exist in the database.")
         return devices
 
-    def get_session(self, device: int) -> OmemoSession:
+    def get_session(self, jid: str, device: int) -> OmemoSession:
         with Session(self._engine) as session:
-            stmt = select(Device).where(Device.device == device)
+            stmt = select(Device).join(Jid).where(Jid.jid == jid).where(Device.device == device)
             odevice = session.scalar(stmt)
             if (odevice):
                 return odevice.session
             else:
-                raise Exception("That device does not exist in the database.")
+                raise Exception("Thas JID or device does not exist in the database.")
 
-    def increase_receive_count(self, device: int) -> None:
+    def increase_receive_count(self, jid: str, device: int) -> None:
         with Session(self._engine) as session:
-            stmt = select(Device).where(Device.device == device)
+            stmt = select(Device).join(Jid).where(Jid.jid == jid).where(Device.device == device)
             odevice = session.scalar(stmt)
             if (odevice):
                 if (odevice.session):
@@ -84,11 +86,11 @@ class OmemoStorage:
                 else:
                     raise Exception("No session for this device.")
             else:
-                raise Exception("That device does not exist in the database.")
+                raise Exception("Thas JID or device does not exist in the database.")
 
-    def increase_send_count(self, device: int) -> None:
+    def increase_send_count(self, jid: str, device: int) -> None:
         with Session(self._engine) as session:
-            stmt = select(Device).where(Device.device == device)
+            stmt = select(Device).join(Jid).where(Jid.jid == jid).where(Device.device == device)
             odevice = session.scalar(stmt)
             if (odevice):
                 if (odevice.session):
@@ -97,11 +99,11 @@ class OmemoStorage:
                 else:
                     raise Exception("No session for this device.")
             else:
-                raise Exception("That device does not exist in the database.")
+                raise Exception("Thas JID or device does not exist in the database.")
 
-    def update_receive_secret(self, device: int, secret: str):
+    def update_receive_secret(self, jid: str, device: int, secret: str):
         with Session(self._engine) as session:
-            stmt = select(Device).where(Device.device == device)
+            stmt = select(Device).join(Jid).where(Jid.jid == jid).where(Device.device == device)
             odevice = session.scalar(stmt)
             if (odevice):
                 if (odevice.session):
@@ -110,11 +112,11 @@ class OmemoStorage:
                 else:
                     raise Exception("No session for this device.")
             else:
-                raise Exception("That device does not exist in the database.")
+                raise Exception("Thas JID or device does not exist in the database.")
 
-    def update_send_secret(self, device: int, secret: str):
+    def update_send_secret(self, jid: str, device: int, secret: str):
         with Session(self._engine) as session:
-            stmt = select(Device).where(Device.device == device)
+            stmt = select(Device).join(Jid).where(Jid.jid == jid).where(Device.device == device)
             odevice = session.scalar(stmt)
             if (odevice):
                 if (odevice.session):
@@ -123,4 +125,4 @@ class OmemoStorage:
                 else:
                     raise Exception("No session for this device.")
             else:
-                raise Exception("That device does not exist in the database.")
+                raise Exception("Thas JID or device does not exist in the database.")
