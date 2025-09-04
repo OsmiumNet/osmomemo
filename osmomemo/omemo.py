@@ -19,9 +19,9 @@ def ub64(s: str) -> bytes:
     return base64.b64decode(s.encode("utf-8"))
 
 class Omemo:
-    def __init__(self, bundle: OmemoBundle, store_path):
+    def __init__(self, bundle: OmemoBundle, storage: OmemoStorage):
         self._bundle = bundle
-        self._storage = OmemoStorage(store_path)
+        self._storage = storage
 
     def create_init_message(
                 self,
