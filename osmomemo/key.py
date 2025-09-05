@@ -35,6 +35,38 @@ class XKeyPair:
         raw_bytes = base64.b64decode(b64)
         return X25519PublicKey.from_public_bytes(raw_bytes)
 
+    @staticmethod
+    def private_key_to_base64(
+                private_key: X25519PrivateKey,
+                encryption: KeySerializationEncryption = NoEncryption(), 
+                encoding="utf-8"
+            ) -> bytes | str:
+        private_bytes = private_key.private_bytes(
+            encoding=Encoding.Raw,
+            format=PrivateFormat.Raw,
+            encryption_algorithm=encryption
+        )
+        b64 = base64.b64encode(private_bytes)
+
+        if (encoding):
+            return b64.decode(encoding)
+        return b64
+
+    @staticmethod
+    def public_key_to_base64(
+                public_key: X25519PublicKey,
+                encoding="utf-8"
+            ) -> bytes | str:
+        public_bytes = public_key.public_bytes(
+            encoding=Encoding.Raw,
+            format=PublicFormat.Raw,
+        )
+        b64 = base64.b64encode(public_bytes)
+
+        if (encoding):
+            return b64.decode(encoding)
+        return b64
+
 
     def get_private_key(self) -> X25519PrivateKey:
         return self._private_key
@@ -47,31 +79,22 @@ class XKeyPair:
                 encryption: KeySerializationEncryption = NoEncryption(), 
                 encoding="utf-8"
             ) -> bytes | str:
-        private_bytes = self._private_key.private_bytes(
-            encoding=Encoding.Raw,
-            format=PrivateFormat.Raw,
-            encryption_algorithm=encryption
+        b64 = XKeyPair.private_key_to_base64(
+                private_key=self._private_key,
+                encryption=encryption,
+                encoding=encoding
         )
-        b64 = base64.b64encode(private_bytes)
-
-        if (encoding):
-            return b64.decode(encoding)
-        return b64
+        return b64 
         
     def get_base64_public_key(
                 self, 
                 encoding="utf-8"
             ) -> bytes | str:
-        public_bytes = self._public_key.public_bytes(
-            encoding=Encoding.Raw,
-            format=PublicFormat.Raw,
+        b64 = XKeyPair.public_key_to_base64(
+                public_key=self._public_key,
+                encoding=encoding
         )
-        b64 = base64.b64encode(public_bytes)
-
-        if (encoding):
-            return b64.decode(encoding)
-        return b64
-
+        return b64 
 
 
 class EdKeyPair:
@@ -96,6 +119,38 @@ class EdKeyPair:
     def base64_to_public_key(b64: str) -> Ed25519PublicKey:
         raw_bytes = base64.b64decode(b64)
         return Ed25519PublicKey.from_public_bytes(raw_bytes)
+
+    @staticmethod
+    def private_key_to_base64(
+                private_key: Ed25519PrivateKey,
+                encryption: KeySerializationEncryption = NoEncryption(), 
+                encoding="utf-8"
+            ) -> bytes | str:
+        private_bytes = private_key.private_bytes(
+            encoding=Encoding.Raw,
+            format=PrivateFormat.Raw,
+            encryption_algorithm=encryption
+        )
+        b64 = base64.b64encode(private_bytes)
+
+        if (encoding):
+            return b64.decode(encoding)
+        return b64
+
+    @staticmethod
+    def public_key_to_base64(
+                public_key: Ed25519PublicKey,
+                encoding="utf-8"
+            ) -> bytes | str:
+        public_bytes = public_key.public_bytes(
+            encoding=Encoding.Raw,
+            format=PublicFormat.Raw,
+        )
+        b64 = base64.b64encode(public_bytes)
+
+        if (encoding):
+            return b64.decode(encoding)
+        return b64
 
     @staticmethod
     def private_ed_to_x_key(private_key: Ed25519PrivateKey) -> X25519PrivateKey:
@@ -140,30 +195,22 @@ class EdKeyPair:
                 encryption: KeySerializationEncryption = NoEncryption(), 
                 encoding="utf-8"
             ) -> bytes | str:
-        private_bytes = self._private_key.private_bytes(
-            encoding=Encoding.Raw,
-            format=PrivateFormat.Raw,
-            encryption_algorithm=encryption
+        b64 = EdKeyPair.private_key_to_base64(
+                private_key=self._private_key,
+                encryption=encryption,
+                encoding=encoding
         )
-        b64 = base64.b64encode(private_bytes)
-
-        if (encoding):
-            return b64.decode(encoding)
-        return b64
+        return b64 
         
     def get_base64_public_key(
                 self, 
                 encoding="utf-8"
             ) -> bytes | str:
-        public_bytes = self._public_key.public_bytes(
-            encoding=Encoding.Raw,
-            format=PublicFormat.Raw,
+        b64 = EdKeyPair.public_key_to_base64(
+                public_key=self._public_key,
+                encoding=encoding
         )
-        b64 = base64.b64encode(public_bytes)
-
-        if (encoding):
-            return b64.decode(encoding)
-        return b64
+        return b64 
 
     def sign_public_key(
                 self, 
