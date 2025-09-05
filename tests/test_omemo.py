@@ -167,3 +167,27 @@ class TestOmemo(unittest.TestCase):
 
         # Test
         self.assertEqual(message_b, message_a.decode())
+
+
+    def test_signature(self):
+        bundle = OmemoBundle(
+            34059834,
+            EdKeyPair.generate(),
+            XKeyPair.generate(),
+            {
+                "0": XKeyPair.generate(),
+                "1": XKeyPair.generate(),
+                "2": XKeyPair.generate(),
+            }
+        )
+
+
+        ik_b64 = bundle.get_indentity().get_base64_public_key()
+        spk_b64 = bundle.get_prekey().get_base64_public_key()
+        spk_sign_b64 = bundle.get_prekey_signature()
+
+        EdKeyPair.verify_public_key(
+            EdKeyPair.base64_to_public_key(ik_b64),
+            XKeyPair.base64_to_public_key(spk_b64),
+            base64.b64decode(spk_sign_b64.encode("utf-8")),
+        )
