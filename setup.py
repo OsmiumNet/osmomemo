@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="osmomemo",
-    version="1.0.0",
+    version="1.1.0",
 
     author="osmiumnet",
     description="Python omemo package",
