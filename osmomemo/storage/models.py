@@ -42,8 +42,8 @@ class Session(Base):
     timestamp: Mapped[int] = mapped_column()
     receive_secret_key: Mapped[str] = mapped_column()
     send_secret_key: Mapped[str] = mapped_column()
-    receive_count: Mapped[int] = mapped_column()
-    send_count: Mapped[int] = mapped_column()
+    receive_nonce: Mapped[str] = mapped_column()
+    send_nonce: Mapped[str] = mapped_column()
 
     device: Mapped["Device"] = relationship(back_populates="session")
 

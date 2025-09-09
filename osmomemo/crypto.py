@@ -94,20 +94,20 @@ class OmemoCryptography:
         return SK, message_bytes
 
     @staticmethod
-    def split_secret_key(secret_key) -> Tuple[bytes, bytes]:
+    def split_secret_key(secret_key: bytes) -> Tuple[bytes, bytes]:
         two_cks = OmemoCryptography._hkdf_derive(secret_key, length=64)
         return two_cks[32:], two_cks[:32]
 
     @staticmethod
-    def send_message(chain_key, count, message_bytes) -> Tuple[bytes, bytes, bytes]:
-        msg_key, wrap_key, next_ck = OmemoCryptography._derive_message_and_wrap(chain_key, count)
+    def send_message(chain_key: bytes, nonce: bytes, message_bytes: bytes) -> Tuple[bytes, bytes, bytes]:
+        msg_key, wrap_key, next_ck = OmemoCryptography._derive_message_and_wrap(chain_key, nonce)
         wrapped = OmemoCryptography._wrap_message_key(wrap_key, msg_key)
         payload = OmemoCryptography._encrypt_payload_with_msgkey(msg_key, message_bytes)
         return next_ck, wrapped, payload
 
     @staticmethod
-    def receive_message(chain_key, count, wrapped_message_key, payload) -> Tuple[bytes, bytes, bytes]:
-        _, wrap_key, next_ck = OmemoCryptography._derive_message_and_wrap(chain_key, count)
+    def receive_message(chain_key: bytes, nonce: bytes, wrapped_message_key: bytes, payload: bytes) -> Tuple[bytes, bytes, bytes]:
+        _, wrap_key, next_ck = OmemoCryptography._derive_message_and_wrap(chain_key, nonce)
         message_key = OmemoCryptography._unwrap_message_key(wrap_key, wrapped_message_key)
         message = OmemoCryptography._decrypt_payload_with_msgkey(message_key, payload)
         return next_ck, message
@@ -120,28 +120,27 @@ class OmemoCryptography:
         return hk.derive(kbs)
 
     @staticmethod
-    def _derive_message_and_wrap(ck, counter) -> Tuple[bytes, bytes, bytes]:
-        ctr_bytes = counter.to_bytes(8, 'big')
-        msg_key = OmemoCryptography._hkdf_derive(ck, info=b"msg|" + ctr_bytes, length=32)
+    def _derive_message_and_wrap(ck: bytes, nonce: bytes) -> Tuple[bytes, bytes, bytes]:
+        msg_key = OmemoCryptography._hkdf_derive(ck, info=b"msg|" + nonce, length=32)
         wrap_key = OmemoCryptography._hkdf_derive(ck, info=b"wrap", length=32)
         new_ck = OmemoCryptography._hkdf_derive(ck, info=b"ck", length=32)
         return msg_key, wrap_key, new_ck
 
     @staticmethod
-    def _wrap_message_key(wrap_key, message_key) -> bytes:
+    def _wrap_message_key(wrap_key: bytes, message_key: bytes) -> bytes:
         aes = AESGCM(wrap_key)
         nonce = os.urandom(12)
         ct = aes.encrypt(nonce, message_key, None)
         return nonce + ct
 
     @staticmethod
-    def _unwrap_message_key(wrap_key, message_key) -> bytes:
+    def _unwrap_message_key(wrap_key: bytes, message_key: bytes) -> bytes:
         nonce, ct = message_key[:12], message_key[12:]
         aes = AESGCM(wrap_key)
         return aes.decrypt(nonce, ct, None)
 
     @staticmethod
-    def _encrypt_payload_with_msgkey(message_key, message_bytes) -> bytes:
+    def _encrypt_payload_with_msgkey(message_key: bytes, message_bytes: bytes) -> bytes:
         aes = AESGCM(message_key)
         nonce = os.urandom(12)
         ct = aes.encrypt(nonce, message_bytes, None)

@@ -42,8 +42,15 @@ class Omemo:
         # Key pairs
         indentity_pair = self._bundle.get_indentity()
 
+        # Create nonce for receive and send
+        # Session nonces will be dinamic in future 
+        session_nonces = os.urandom(24)
+
+        # Combine nonce with message to encrypt
+        message = session_nonces + message_bytes
+
         SK, ek_pub, encrypted_message = OmemoCrypto.create_init_message(
-                message_bytes=message_bytes,
+                message_bytes=message,
                 indentity_pair=indentity_pair,
                 indentity_key=indentity_key,
                 signed_prekey=signed_prekey,
@@ -54,7 +61,14 @@ class Omemo:
         SK_RECV, SK_SEND = OmemoCrypto.split_secret_key(SK)
 
         self._storage.add_device(jid, device)
-        self._storage.add_session(jid, device, b64(SK_RECV), b64(SK_SEND))
+        self._storage.add_session(
+                jid=jid, 
+                device=device, 
+                receive_secret_key=b64(SK_RECV), 
+                send_secret_key=b64(SK_SEND),
+                receive_nonce=b64(session_nonces[:12]),
+                send_nonce=b64(session_nonces[12:]), 
+        )
 
         return ek_pub, encrypted_message 
 
@@ -83,34 +97,55 @@ class Omemo:
                 ephemeral_key=ephemeral_key,
         )
 
+        # Seperate nonces and messsage
+        session_nonces = message_bytes[:24]
+        message = message_bytes[24:]
+
         SK_SEND, SK_RECV = OmemoCrypto.split_secret_key(SK)
 
         self._storage.add_device(jid, device)
-        self._storage.add_session(jid, device, b64(SK_RECV), b64(SK_SEND))
+        self._storage.add_session(
+                jid=jid, 
+                device=device, 
+                receive_secret_key=b64(SK_RECV), 
+                send_secret_key=b64(SK_SEND),
+                receive_nonce=b64(session_nonces[12:]),
+                send_nonce=b64(session_nonces[:12]), 
+        )
 
-        return message_bytes
+        return message
 
     def send_message(self, jid: str, device: int, message_bytes: bytes) -> Tuple[bytes, bytes, bytes]:
         session = self._storage.get_session(jid, device)
+        
+        send_nonce = os.urandom(12)
+        message = send_nonce + message_bytes
+
         next_ck, wrapped, payload = OmemoCrypto.send_message(
                 ub64(session.send_secret_key), 
-                session.send_count, 
-                message_bytes
+                ub64(session.send_nonce), 
+                message
         )
+
         self._storage.update_send_secret(jid, device, b64(next_ck))
-        self._storage.increase_send_count(jid, device)
+        self._storage.set_send_nonce(jid, device, send_nonce)
         return wrapped, payload
 
     def receive_message(self, jid: str, device: int, wrapped_message_key: bytes, payload: bytes) -> Tuple[bytes, bytes, bytes]:
         session = self._storage.get_session(jid, device)
-        next_ck, message = OmemoCrypto.receive_message(
+
+        next_ck, message_bytes = OmemoCrypto.receive_message(
                 ub64(session.receive_secret_key), 
-                session.receive_count, 
+                ub64(session.receive_nonce), 
                 wrapped_message_key, 
                 payload
         )
+
+        receive_nonce = message_bytes[:12]
+        message = message_bytes[12:]
+
         self._storage.update_receive_secret(jid, device, b64(next_ck))
-        self._storage.increase_receive_count(jid, device)
+        self._storage.set_receive_nonce(jid, device, b64(receive_nonce))
         return message
 
     def close_storage(self):
