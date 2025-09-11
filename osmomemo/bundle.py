@@ -46,10 +46,20 @@ class OmemoBundle:
     
     def get_indentity_fingerprint(self) -> bytes:
         public_bytes = self._indentity_key.get_public_key_bytes()
-        hash_obj = hashlib.sha256()
-        hash_obj.update(public_bytes)
-        return hash_obj.digest() 
+        return OmemoBundle.public_key_to_fingerprint(public_bytes)  
 
     def get_indentity_hex_fingerprint(self) -> str:
-        fingerprint_digest = self.get_indentity_fingerprint()
-        return fingerprint_digest.hex() 
+        public_bytes = self._indentity_key.get_public_key_bytes()
+        return OmemoBundle.public_key_to_hex_fingerprint(public_bytes)
+
+
+    @staticmethod
+    def public_key_to_fingerprint(public_key_bytes: bytes):
+        hash_obj = hashlib.sha256()
+        hash_obj.update(public_key_bytes)
+        return hash_obj.digest() 
+
+    @staticmethod
+    def public_key_to_hex_fingerprint(public_key_bytes: bytes):
+        return OmemoBundle.public_key_to_fingerprint(public_key_bytes).hex()
+
