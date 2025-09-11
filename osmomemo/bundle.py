@@ -1,3 +1,5 @@
+import hashlib
+
 from typing import Dict
 
 from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey
@@ -41,3 +43,13 @@ class OmemoBundle:
                 public_key=self._signed_prekey.get_public_key(),
                 encoding=encoding
         )
+    
+    def get_indentity_fingerprint(self) -> bytes:
+        public_bytes = self._indentity_key.get_public_key_bytes()
+        hash_obj = hashlib.sha256()
+        hash_obj.update(public_bytes)
+        return hash_obj.digest() 
+
+    def get_indentity_hex_fingerprint(self) -> str:
+        fingerprint_digest = self.get_indentity_fingerprint()
+        return fingerprint_digest.hex() 
